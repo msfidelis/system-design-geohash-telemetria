@@ -1,0 +1,18 @@
+FROM golang:1.25-alpine
+
+WORKDIR /app
+
+# Instalar Air para hot reload
+RUN go install github.com/air-verse/air@latest
+
+# Copiar go.mod e go.sum
+COPY go.mod go.sum* ./
+
+# Download de dependências
+RUN go mod download
+
+# Copiar o código fonte
+COPY . .
+
+# Comando padrão
+CMD ["air", "-c", ".air.toml"]

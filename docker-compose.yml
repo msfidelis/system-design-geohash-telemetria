@@ -1,0 +1,117 @@
+services:
+  mqtt:
+    image: eclipse-mosquitto:2
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    restart: unless-stopped
+
+  nats:
+    image: nats:2-alpine
+    command: ["--jetstream", "--store_dir=/data", "-m", "8222"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    volumes:
+      - ./nats/data:/data
+    restart: unless-stopped
+
+  cassandra:
+    image: cassandra:5
+    ports:
+      - "9042:9042"
+    volumes:
+      - ./cassandra/data:/var/lib/cassandra
+    environment:
+      - CASSANDRA_CLUSTER_NAME=geoip-cluster
+      - CASSANDRA_DC=dc1
+      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+    healthcheck:
+      test: ["CMD", "cqlsh", "-e", "describe keyspaces"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
+
+  cassandra-init:
+    image: cassandra:5
+    volumes:
+      - ./cassandra/init:/init
+    depends_on:
+      cassandra:
+        condition: service_healthy
+    command: cqlsh cassandra -f /init/hot_schema.cql
+    restart: on-failure
+
+  simulacao:
+    build:
+      context: ./simulacao
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./simulacao:/app
+    environment:
+      - MQTT_BROKER=tcp://mqtt:1883
+    depends_on:
+      - mqtt
+    restart: unless-stopped
+
+  geoip-mqtt-consumer:
+    build:
+      context: ./geoip-mqtt-consumer
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./geoip-mqtt-consumer:/app
+    environment:
+      - MQTT_BROKER=tcp://mqtt:1883
+      - NATS_URL=nats://nats:4222
+    depends_on:
+      - mqtt
+      - nats
+    restart: unless-stopped
+
+  hot-consumer:
+    build:
+      context: ./hot-consumer
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./hot-consumer:/app
+    environment:
+      - NATS_URL=nats://nats:4222
+      - CASSANDRA_HOST=cassandra
+    depends_on:
+      - nats
+      - cassandra
+    restart: unless-stopped
+
+  cold-consumer:
+    build:
+      context: ./cold-consumer
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./cold-consumer:/app
+    environment:
+      - NATS_URL=nats://nats:4222
+    depends_on:
+      - nats
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./api:/app
+    ports:
+      - "8080:8080"
+    environment:
+      - CASSANDRA_HOST=cassandra
+      - PORT=8080
+    depends_on:
+      cassandra:
+        condition: service_healthy
+    restart: unless-stopped

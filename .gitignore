@@ -1,0 +1,10 @@
+cassandra/data
+mosquitto/data
+mosquitto/log
+.claude
+nats/*
+nats
+cold-consumer/tmp
+hot-consumer/tmp
+geoip-receiver/tmp
+simulacao/tmp
