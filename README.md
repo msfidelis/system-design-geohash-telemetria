@@ -56,6 +56,76 @@ simulacao
 
 ---
 
+## Geohash — Conversão e Adoção no Design
+
+### Como funciona a conversão de lat/lon → Geohash
+
+O Geohash é um sistema de geocodificação que transforma um par de coordenadas `(latitude, longitude)` em uma string alfanumérica de comprimento variável. O processo usa **bisseção binária intercalada** das faixas de latitude e longitude:
+
+**1. Divisão do espaço**
+
+O algoritmo parte do espaço global e vai dividindo recursivamente ao meio. Para cada bit calculado:
+- Os bits de **longitude** são extraídos dividindo o intervalo `[-180, +180]`
+- Os bits de **latitude** são extraídos dividindo o intervalo `[-90, +90]`
+- Se a coordenada está na metade superior do intervalo → bit `1`; inferior → bit `0`
+
+**2. Intercalação dos bits**
+
+Os bits de longitude e latitude são **intercalados** (longitude ocupa as posições pares, latitude as ímpares), formando uma sequência binária única que representa a célula geográfica:
+
+```
+lon bit, lat bit, lon bit, lat bit, lon bit, lat bit, ...
+```
+
+**3. Codificação em base 32**
+
+A sequência binária é agrupada em blocos de 5 bits e cada bloco é codificado em um dos 32 caracteres do alfabeto `0-9b-z` (excluindo `a`, `i`, `l`, `o` para evitar ambiguidade visual). Cada caractere adicional na string subdivide a célula em 32 subcélulas menores.
+
+**Exemplo — Praça da Sé (`-23.55028, -46.63389`):**
+
+```
+precision 5  →  6gyf4          (~5km  × 5km  — célula regional)
+precision 7  →  6gyf4bf        (~150m × 150m — bairro)
+precision 9  →  6gyf4bftc      (~5m   × 5m   — quadra)
+precision 12 →  6gyf4bftcmty   (~37cm × 19cm — posição precisa)
+```
+
+Cada caractere adicionado **refina a célula 32×** em área, mantendo a propriedade de prefixo: `6gyf4bf` é sempre uma subdivisão de `6gyf4`.
+
+---
+
+### Por que Geohash foi adotado neste design
+
+**Indexação geográfica sem extensões espaciais**
+
+O Cassandra não tem suporte nativo a índices geoespaciais (sem PostGIS, sem R-tree). O Geohash transforma o problema de "encontrar objetos numa área" em uma simples **busca por chave de partição**, que é a operação mais eficiente possível no Cassandra. A query `WHERE geohash_5 = '6gyf4'` retorna todos os veículos da célula com leitura direta, sem full scan.
+
+**A hierarquia resolve queries em diferentes escalas sem alterar o schema**
+
+Por ser um prefixo hierárquico, o mesmo dado serve para perguntas em granularidades diferentes:
+
+| Query | Geohash usado | Área coberta |
+|---|---|---|
+| "Carros neste bairro" | `geohash_7` | ~150m × 150m |
+| "Carros nesta região" | `geohash_5` | ~5km × 5km |
+| "Posição exata do carro" | `geohash_12` | ~37cm |
+
+Todos os níveis são computados uma única vez no `geoip-mqtt-consumer` e persistidos juntos. Não há custo de recomputação em queries.
+
+**Localidade de dados**
+
+Veículos na mesma região geográfica compartilham o mesmo prefixo de geohash. No Cassandra, isso significa que estão na mesma partição de `car_location_by_geohash` (chave: `geohash_5`). Queries por região são resolvidas em um único nó sem coordenação — o oposto de consultas por latitude/longitude que exigiriam scatter/gather em toda a ring.
+
+**Codificação compacta e comparável**
+
+Uma string como `6gyf4` ocupa 5 bytes e pode ser indexada, comparada e transmitida como texto simples. A alternativa — indexar por faixas de float64 de lat/lon — exigiria índices compostos, range queries em duas dimensões simultâneas e seria muito menos eficiente em sistemas de chave-valor.
+
+**Trade-off conhecido: células de borda**
+
+O único trade-off do Geohash é que células adjacentes podem ter prefixos diferentes (ex: uma região que cruza a fronteira entre `6gyf4` e `6gyf3`). Para este PoC, o `geohash_5` cobre ~5km × 5km — grande o suficiente para que a maioria das queries de proximidade caiba dentro de uma única célula. Em produção, a solução canônica é consultar a célula central mais as 8 vizinhas (função disponível na maioria das bibliotecas de geohash).
+
+---
+
 ## Componentes
 
 ### simulacao
@@ -222,6 +292,11 @@ CREATE TABLE car_location_by_geohash (
     geohash_7  TEXT,
     PRIMARY KEY (geohash_5, id)
 );
+```
+
+```sql
+-- Indice para a busca via Geohash (5 posicão)
+CREATE INDEX IF NOT EXISTS ON car_location_by_id (geohash_5);
 ```
 
 ---
