@@ -1,10 +1,18 @@
 # GeoIP Telemetria — PoC de Rastreamento em Tempo Real
 
+> Implementacão da Prova de Conceito do case de [Telemetria e Geolocalização]() resolvido na aula de System Design da LinuxTips
+
+> Projeto ALTAMENTE Vibecodado kkkk
+
 PoC de um sistema de rastreamento de veículos em tempo real usando geohash para indexação geográfica. O objetivo é demonstrar uma pipeline de ingestão de dados de localização com múltiplos consumidores (hot e cold path), usando tecnologias de streaming e bancos de dados adequados para cada camada.
 
 ---
 
 ## Arquitetura
+
+![Case Resolvido em Aula](/docs/T2-Logistica-Telemetria.drawio.png)
+
+> Output do case realizado com os alunos 
 
 ### Topologia
 
