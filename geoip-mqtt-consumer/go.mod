@@ -1,4 +1,4 @@
-module github.com/msfidelis01/geoip-teste/geoip-receiver
+module geoip-mqtt-consumer
 
 go 1.25.0
 

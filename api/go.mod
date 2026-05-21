@@ -1,4 +1,4 @@
-module github.com/msfidelis01/geoip-teste/api
+module app
 
 go 1.24.0
 

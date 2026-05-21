@@ -3,9 +3,10 @@ package services
 import (
 	"fmt"
 
+	"app/entities"
+
 	"github.com/gocql/gocql"
 	"github.com/mmcloughlin/geohash"
-	"github.com/msfidelis01/geoip-teste/api/entities"
 )
 
 type LocationService struct {

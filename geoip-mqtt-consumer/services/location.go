@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"geoip-mqtt-consumer/entities"
+
 	"github.com/mmcloughlin/geohash"
-	"github.com/msfidelis01/geoip-teste/geoip-receiver/entities"
 	"github.com/nats-io/nats.go/jetstream"
 )
 

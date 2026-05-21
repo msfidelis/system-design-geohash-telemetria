@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/msfidelis01/geoip-teste/geoip-receiver/listeners"
-	mqttpkg "github.com/msfidelis01/geoip-teste/geoip-receiver/pkg/mqtt"
-	natspkg "github.com/msfidelis01/geoip-teste/geoip-receiver/pkg/nats"
-	"github.com/msfidelis01/geoip-teste/geoip-receiver/services"
+	"geoip-mqtt-consumer/listeners"
+	mqttpkg "geoip-mqtt-consumer/pkg/mqtt"
+	natspkg "geoip-mqtt-consumer/pkg/nats"
+	"geoip-mqtt-consumer/services"
+
 	"github.com/nats-io/nats.go/jetstream"
 )
 
@@ -48,7 +49,7 @@ func main() {
 	locationService := services.NewLocationService(js)
 	locationListener := listeners.NewLocationListener(locationService)
 
-	mqttClient, err := mqttpkg.Connect(mqttAddr(), "geoip-receiver", locationListener.Handle)
+	mqttClient, err := mqttpkg.Connect(mqttAddr(), "geoip-mqtt-consumer", locationListener.Handle)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "mqtt connect error: %v\n", err)
 		os.Exit(1)

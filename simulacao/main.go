@@ -1,13 +1,17 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"math/rand"
 	"os"
 	"time"
 
-	mqtt "github.com/eclipse/paho.mqtt.golang"
+	pb "github.com/msfidelis01/geoip-teste/simulacao/proto/location"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/keepalive"
 )
 
 const (
@@ -86,11 +90,38 @@ func (c *car) move(rng *rand.Rand) {
 	}
 }
 
-func brokerAddr() string {
-	if v := os.Getenv("MQTT_BROKER"); v != "" {
+func receiverAddr() string {
+	if v := os.Getenv("GRPC_ADDR"); v != "" {
 		return v
 	}
-	return "tcp://mqtt:1883"
+	return "geoip-receiver:50051"
+}
+
+func runStream(client pb.LocationReceiverClient, cars []*car, rng *rand.Rand) error {
+	s, err := client.Stream(context.Background())
+	if err != nil {
+		return fmt.Errorf("open stream: %w", err)
+	}
+
+	fmt.Printf("stream open — simulating %d cars (Praça da Sé + MASP)\n", len(cars))
+
+	for {
+		c := cars[rng.Intn(len(cars))]
+		c.move(rng)
+
+		if err := s.Send(&pb.LocationPayload{
+			Id:        c.id,
+			Lat:       c.lat,
+			Lon:       c.lon,
+			Timestamp: time.Now().UnixMilli(),
+		}); err != nil {
+			return fmt.Errorf("send: %w", err)
+		}
+
+		fmt.Printf("sent: %s %.6f %.6f\n", c.id, c.lat, c.lon)
+
+		time.Sleep(time.Duration(500+rng.Intn(1500)) * time.Millisecond)
+	}
 }
 
 func main() {
@@ -104,30 +135,35 @@ func main() {
 		cars = append(cars, &car{id: id, lat: maspBaseLat, lon: maspBaseLon, baseLat: maspBaseLat, baseLon: maspBaseLon})
 	}
 
-	opts := mqtt.NewClientOptions().
-		AddBroker(brokerAddr()).
-		SetClientID("simulacao").
-		SetConnectRetry(true).
-		SetConnectRetryInterval(3 * time.Second)
-
-	client := mqtt.NewClient(opts)
-	if token := client.Connect(); token.Wait() && token.Error() != nil {
-		fmt.Fprintf(os.Stderr, "connect error: %v\n", token.Error())
+	conn, err := grpc.NewClient(
+		receiverAddr(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time:                10 * time.Second,
+			Timeout:             3 * time.Second,
+			PermitWithoutStream: true,
+		}),
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "dial error: %v\n", err)
 		os.Exit(1)
 	}
-	defer client.Disconnect(250)
+	defer conn.Close()
 
-	fmt.Printf("connected to %s — simulating %d cars (Praça da Sé + MASP)\n", brokerAddr(), len(cars))
+	client := pb.NewLocationReceiverClient(conn)
 
+	fmt.Printf("connecting to geoip-receiver at %s\n", receiverAddr())
+
+	backoff := time.Second
 	for {
-		c := cars[rng.Intn(len(cars))]
-		c.move(rng)
-
-		payload := fmt.Sprintf("%s:%.6f:%.6f:%d", c.id, c.lat, c.lon, time.Now().UnixMilli())
-		client.Publish("geoip/location", 0, false, payload).Wait()
-
-		fmt.Printf("published: %s\n", payload)
-
-		time.Sleep(time.Duration(500+rng.Intn(1500)) * time.Millisecond)
+		if err := runStream(client, cars, rng); err != nil {
+			fmt.Fprintf(os.Stderr, "stream error: %v — reconnecting in %s\n", err, backoff)
+			time.Sleep(backoff)
+			if backoff < 30*time.Second {
+				backoff *= 2
+			}
+		} else {
+			backoff = time.Second
+		}
 	}
 }

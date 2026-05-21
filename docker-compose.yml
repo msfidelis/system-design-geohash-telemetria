@@ -48,6 +48,21 @@ services:
     command: cqlsh cassandra -f /init/hot_schema.cql
     restart: on-failure
 
+  geoip-receiver:
+    build:
+      context: ./geoip-receiver
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./geoip-receiver:/app
+    ports:
+      - "50051:50051"
+    environment:
+      - MQTT_BROKER=tcp://mqtt:1883
+      - GRPC_ADDR=:50051
+    depends_on:
+      - mqtt
+    restart: unless-stopped
+
   simulacao:
     build:
       context: ./simulacao
@@ -55,9 +70,9 @@ services:
     volumes:
       - ./simulacao:/app
     environment:
-      - MQTT_BROKER=tcp://mqtt:1883
+      - GRPC_ADDR=geoip-receiver:50051
     depends_on:
-      - mqtt
+      - geoip-receiver
     restart: unless-stopped
 
   geoip-mqtt-consumer:

@@ -6,9 +6,10 @@ import (
 	"strconv"
 	"strings"
 
+	"geoip-mqtt-consumer/entities"
+	"geoip-mqtt-consumer/services"
+
 	mqttio "github.com/eclipse/paho.mqtt.golang"
-	"github.com/msfidelis01/geoip-teste/geoip-receiver/entities"
-	"github.com/msfidelis01/geoip-teste/geoip-receiver/services"
 )
 
 type LocationListener struct {

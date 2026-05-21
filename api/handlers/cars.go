@@ -3,8 +3,9 @@ package handlers
 import (
 	"strconv"
 
+	"app/services"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/msfidelis01/geoip-teste/api/services"
 )
 
 type CarsHandler struct {

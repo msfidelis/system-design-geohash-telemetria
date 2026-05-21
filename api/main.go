@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"os"
 
+	"app/handlers"
+	cassandrapkg "app/pkg/cassandra"
+	"app/services"
+
 	"github.com/gofiber/fiber/v2"
-	"github.com/msfidelis01/geoip-teste/api/handlers"
-	cassandrapkg "github.com/msfidelis01/geoip-teste/api/pkg/cassandra"
-	"github.com/msfidelis01/geoip-teste/api/services"
 )
 
 func cassandraHost() string {
