@@ -2,9 +2,10 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
 	"math"
-	"math/rand"
+	mrand "math/rand"
 	"os"
 	"time"
 
@@ -65,6 +66,14 @@ type car struct {
 	baseLon float64
 }
 
+func newCorrelationID() string {
+	var b [16]byte
+	rand.Read(b[:])
+	b[6] = (b[6] & 0x0f) | 0x40
+	b[8] = (b[8] & 0x3f) | 0x80
+	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
+}
+
 func metersToDegreesLat(m float64) float64 {
 	return m / 111320.0
 }
@@ -79,7 +88,7 @@ func distanceM(lat1, lon1, lat2, lon2 float64) float64 {
 	return math.Sqrt(dlat*dlat + dlon*dlon)
 }
 
-func (c *car) move(rng *rand.Rand) {
+func (c *car) move(rng *mrand.Rand) {
 	angle := rng.Float64() * 2 * math.Pi
 	newLat := c.lat + metersToDegreesLat(stepM*math.Sin(angle))
 	newLon := c.lon + metersToDegreesLon(stepM*math.Cos(angle), c.lat)
@@ -97,7 +106,7 @@ func receiverAddr() string {
 	return "geoip-receiver:50051"
 }
 
-func runStream(client pb.LocationReceiverClient, cars []*car, rng *rand.Rand) error {
+func runStream(client pb.LocationReceiverClient, cars []*car, rng *mrand.Rand) error {
 	s, err := client.Stream(context.Background())
 	if err != nil {
 		return fmt.Errorf("open stream: %w", err)
@@ -109,23 +118,25 @@ func runStream(client pb.LocationReceiverClient, cars []*car, rng *rand.Rand) er
 		c := cars[rng.Intn(len(cars))]
 		c.move(rng)
 
+		corrID := newCorrelationID()
 		if err := s.Send(&pb.LocationPayload{
-			Id:        c.id,
-			Lat:       c.lat,
-			Lon:       c.lon,
-			Timestamp: time.Now().UnixMilli(),
+			CorrelationId: corrID,
+			Id:            c.id,
+			Lat:           c.lat,
+			Lon:           c.lon,
+			Timestamp:     time.Now().UnixMilli(),
 		}); err != nil {
 			return fmt.Errorf("send: %w", err)
 		}
 
-		fmt.Printf("sent: %s %.6f %.6f\n", c.id, c.lat, c.lon)
+		fmt.Printf("sent: correlation_id=%s id=%s lat=%.6f lon=%.6f\n", corrID, c.id, c.lat, c.lon)
 
 		time.Sleep(time.Duration(500+rng.Intn(1500)) * time.Millisecond)
 	}
 }
 
 func main() {
-	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	rng := mrand.New(mrand.NewSource(time.Now().UnixNano()))
 
 	cars := make([]*car, 0, len(uuids_se)+len(uuids_masp))
 	for _, id := range uuids_se {

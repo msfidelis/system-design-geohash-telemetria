@@ -32,8 +32,8 @@ func (l *LocationListener) Handle(msg jetstream.Msg) {
 		return
 	}
 
-	fmt.Printf("[hot] id=%s geohash_5=%s geohash_7=%s lat=%.6f lon=%.6f timestamp=%d\n",
-		event.ID, event.Geohash5, event.Geohash7, event.Lat, event.Lon, event.Timestamp)
+	fmt.Printf("[hot] correlation_id=%s id=%s geohash_5=%s geohash_7=%s lat=%.6f lon=%.6f timestamp=%d\n",
+		event.CorrelationID, event.ID, event.Geohash5, event.Geohash7, event.Lat, event.Lon, event.Timestamp)
 
 	msg.Ack()
 }

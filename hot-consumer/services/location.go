@@ -60,7 +60,8 @@ func (s *LocationService) UpsertLWW(event entities.LocationEvent) error {
 		return fmt.Errorf("lwt car_location_by_id: %w", err)
 	}
 	if !applied {
-		fmt.Printf("[hot] skipped stale event id=%s incoming=%d\n", event.ID, event.Timestamp)
+		fmt.Printf("[hot] skipped stale event correlation_id=%s id=%s incoming=%d\n",
+			event.CorrelationID, event.ID, event.Timestamp)
 		return nil
 	}
 

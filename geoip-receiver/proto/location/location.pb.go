@@ -23,10 +23,11 @@ const (
 
 type LocationPayload struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Lat           float64                `protobuf:"fixed64,2,opt,name=lat,proto3" json:"lat,omitempty"`
-	Lon           float64                `protobuf:"fixed64,3,opt,name=lon,proto3" json:"lon,omitempty"`
-	Timestamp     int64                  `protobuf:"varint,4,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	CorrelationId string                 `protobuf:"bytes,1,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	Lat           float64                `protobuf:"fixed64,3,opt,name=lat,proto3" json:"lat,omitempty"`
+	Lon           float64                `protobuf:"fixed64,4,opt,name=lon,proto3" json:"lon,omitempty"`
+	Timestamp     int64                  `protobuf:"varint,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -59,6 +60,13 @@ func (x *LocationPayload) ProtoReflect() protoreflect.Message {
 // Deprecated: Use LocationPayload.ProtoReflect.Descriptor instead.
 func (*LocationPayload) Descriptor() ([]byte, []int) {
 	return file_proto_location_location_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *LocationPayload) GetCorrelationId() string {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return ""
 }
 
 func (x *LocationPayload) GetId() string {
@@ -137,12 +145,13 @@ var File_proto_location_location_proto protoreflect.FileDescriptor
 
 const file_proto_location_location_proto_rawDesc = "" +
 	"\n" +
-	"\x1dproto/location/location.proto\x12\blocation\"c\n" +
-	"\x0fLocationPayload\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
-	"\x03lat\x18\x02 \x01(\x01R\x03lat\x12\x10\n" +
-	"\x03lon\x18\x03 \x01(\x01R\x03lon\x12\x1c\n" +
-	"\ttimestamp\x18\x04 \x01(\x03R\ttimestamp\"\x15\n" +
+	"\x1dproto/location/location.proto\x12\blocation\"\x8a\x01\n" +
+	"\x0fLocationPayload\x12%\n" +
+	"\x0ecorrelation_id\x18\x01 \x01(\tR\rcorrelationId\x12\x0e\n" +
+	"\x02id\x18\x02 \x01(\tR\x02id\x12\x10\n" +
+	"\x03lat\x18\x03 \x01(\x01R\x03lat\x12\x10\n" +
+	"\x03lon\x18\x04 \x01(\x01R\x03lon\x12\x1c\n" +
+	"\ttimestamp\x18\x05 \x01(\x03R\ttimestamp\"\x15\n" +
 	"\x03Ack\x12\x0e\n" +
 	"\x02ok\x18\x01 \x01(\bR\x02ok2J\n" +
 	"\x10LocationReceiver\x126\n" +

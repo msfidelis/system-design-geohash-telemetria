@@ -29,9 +29,9 @@ func (s *LocationServer) Stream(stream pb.LocationReceiver_StreamServer) error {
 			return err
 		}
 
-		raw := fmt.Sprintf("%s:%.6f:%.6f:%d", msg.Id, msg.Lat, msg.Lon, msg.Timestamp)
+		raw := fmt.Sprintf("%s:%s:%.6f:%.6f:%d", msg.CorrelationId, msg.Id, msg.Lat, msg.Lon, msg.Timestamp)
 		s.mqtt.Publish("geoip/location", 0, false, raw).Wait()
-		fmt.Printf("published: %s\n", raw)
+		fmt.Printf("published: correlation_id=%s id=%s lat=%.6f lon=%.6f\n", msg.CorrelationId, msg.Id, msg.Lat, msg.Lon)
 
 		if err := stream.Send(&pb.Ack{Ok: true}); err != nil {
 			fmt.Fprintf(os.Stderr, "send ack error: %v\n", err)

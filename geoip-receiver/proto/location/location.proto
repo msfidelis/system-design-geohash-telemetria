@@ -5,10 +5,11 @@ package location;
 option go_package = "geoip-receiver/proto/location";
 
 message LocationPayload {
-  string id        = 1;
-  double lat       = 2;
-  double lon       = 3;
-  int64  timestamp = 4;
+  string correlation_id = 1;
+  string id             = 2;
+  double lat            = 3;
+  double lon            = 4;
+  int64  timestamp      = 5;
 }
 
 message Ack {
