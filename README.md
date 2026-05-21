@@ -1,6 +1,6 @@
 # GeoIP Telemetria — PoC de Rastreamento em Tempo Real
 
-> Implementacão da Prova de Conceito do case de [Telemetria e Geolocalização]() resolvido na aula de System Design da LinuxTips
+> Implementacão da Prova de Conceito do case de [Telemetria e Geolocalização](https://github.com/msfidelis/linuxtips-curso-descomplicando-o-system-design/blob/main/cases/AVANCADO_TELEMETRIA_LOGISTICA.md) resolvido na aula de System Design da LinuxTips
 
 > Projeto ALTAMENTE Vibecodado kkkk
 
